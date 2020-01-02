@@ -10,17 +10,18 @@ from urllib import request
 from utils import fetch_links
 import argparse
 import configparser
+from time import sleep
 import os
+CLR_CMD = 'cls' if os.name=='nt' else 'clear'
 
 
 def generate_config():
+    print('Started creating default configuration file')
     config = configparser.ConfigParser()
     config['GENERAL'] = {
         "mirror_path": os.path.join(os.getcwd(), 'pip_mirror'),
         "source": 'https://pypi.org/simple',
         "n_worker": os.cpu_count()-1,
-        "http_proxy": request.getproxies().get('http'),
-        "https_proxy": request.getproxies().get('http')
     }
     config['INCLUDE'] = {
         "type": "\nbinary\nsource",
@@ -35,7 +36,8 @@ def generate_config():
     }
     with open('pip_mirror.conf', 'w') as configfile:
         config.write(configfile)
-    print("Config file written successfully in {}".format(
+    sleep(2)
+    print("\nConfig file written successfully in {}".format(
         os.path.abspath('pip_mirror.conf')))
 
 
@@ -47,12 +49,10 @@ group.add_argument("-C", "--config",
 group.add_argument("--generate-config", action="store_const", const=True,
                    default=False)
 
-args = prsr.parse_args(["-C", r"E:\Office\SystemManagement\pip_mirror\trunk\pip_mirror.conf"])
-# args = prsr.parse_args()
-
-
+# args = prsr.parse_args(["-C", r"E:\Office\SystemManagement\pip_mirror\trunk\pip_mirror.conf"])
+os.system('cls')
+args = prsr.parse_args()
 if args.generate_config:
-    print('abc')
     generate_config()
     exit()
 
