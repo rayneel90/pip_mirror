@@ -4,11 +4,10 @@ preference mentioned in the config file
 """
 import queue
 from bs4 import BeautifulSoup as bs
-from utils.helpers import *
 from pathlib import Path
-from time import time
+# from time import time
 from utils.worker import  LinkFetcher
-from urllib import request
+# from urllib import request
 from utils.helpers import *
 
 def get_pkglist(base: str, include: str, exclude: str) -> list:
@@ -59,11 +58,10 @@ def fetch_links(config):
     for pkg in pkglist:
         pkg_q.put(pkg)
     n_worker = config['GENERAL'].getint("n_worker")
-    ptrn = create_regex(config)
+    filters = create_filters(config)
     start = time()
     for i in range(n_worker//3):
-        t = LinkFetcher(pkg_q, err_q, start, ptrn,
-                        location, base_url)
+        t = LinkFetcher(pkg_q, err_q, start, filters, location, base_url)
         t.setDaemon(True)
         t.start()
     pkg_q.join()
@@ -78,8 +76,11 @@ def fetch_links(config):
         fil.write('\n'.join(errlist))
 
 
-
 # import configparser
+# from pathlib import Path
+# from utils.helpers import build_index
 # config = configparser.ConfigParser()
 # config.read("pip_mirror.conf")
+# location = Path(config['GENERAL']['mirror_path'])
+# build_index(location, 'cudf')
 # fetch_links(config)

@@ -12,7 +12,22 @@ from utils.helpers import *
 
 
 class LinkFetcher(threading.Thread):
-    def __init__(self, in_que, err_q, start, ptrn, location,
+    ptrn = {
+        'binary': re.compile(
+            r'(?P<project>[0-9A-z_.]*)-'
+            r'(?P<version>[0-9.a-z_-]*)'
+            r'-(?P<py_ver>[0-9a-z.]*)'
+            r'-(?P<imple>[0-9a-z]*)'
+            r'-(?P<platform>[0-9a-z-_.]*)'
+            r'(?P<extn>.whl)'
+        ),
+        'source': re.compile(
+            r'^(?P<project>[0-9A-z_ .-]*)-'
+            r'(?P<version>[:0-9.a-z_-]*)'
+            r'(?P<extn>.tar.gz|.zip)$'
+        )
+    }
+    def __init__(self, in_que, err_q, start, filters,location,
                  base_url="https://pypi.org/simple/"):
         super().__init__()
         self.in_queue = in_que
@@ -20,13 +35,15 @@ class LinkFetcher(threading.Thread):
         self.size = in_que.qsize()
         self.last = self.start
         self.base_url = base_url
-        self.ptrn = ptrn
         self.location = location
         self.err_q = err_q
+        self.filters = filters
 
     def run(self):
         while True:
             pkg = self.in_queue.get()
+            if pkg['project'] == 'ipython_genutils':
+                pkg['project'] = 'ipython-genutils'
             url = urljoin(self.base_url, pkg['link'])
             html = bs(
                 request.urlopen(url).read(),
@@ -43,12 +60,18 @@ class LinkFetcher(threading.Thread):
             ])
             if 'version' not in df.columns:
                 self.err_q.put(pkg['project'])
+                build_index(self.location, pkg['project'])
                 continue
             dl_q = queue.Queue()
-            for itm in filter_pkgs(df):
+            for itm in filter_pkgs(df, self.filters):
                 dl_q.put(itm)
+            if not dl_q.qsize():
+                self.err_q.put(pkg['project'])
+                build_index(self.location, pkg['project'])
+                continue
             dl_start = time()
             dl_location = self.location / 'packages' / pkg['project']
+
             for i in range(3):
                 f = FileDownloader(dl_q, dl_location)
                 f.setDaemon(True)
